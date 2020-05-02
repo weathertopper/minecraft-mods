@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="net.minecraftforge.event.entity.living.LivingHurtEvent"/>
+<fullyQualifiedTypeName name="net.minecraft.entity.Entity"/>
+<fullyQualifiedTypeName name="net.minecraft.util.DamageSource"/>
+<fullyQualifiedTypeName name="net.minecraft.world.World"/>
+<fullyQualifiedTypeName name="net.minecraft.item.ItemStack"/>
+<fullyQualifiedTypeName name="net.minecraft.entity.player.PlayerEntity"/>
+<fullyQualifiedTypeName name="net.minecraft.entity.effect.LightningBoltEntity"/>
+<fullyQualifiedTypeName name="net.minecraft.item.Items"/>
+<fullyQualifiedTypeName name="net.minecraft.inventory.EquipmentSlotType"/>
+<fullyQualifiedTypeName name="net.minecraftforge.event.world.WorldEvent"/>
+</qualifiedTypeNameHistroy>
