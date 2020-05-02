@@ -26,49 +26,42 @@ public class ExampleMod {
 		MinecraftForge.EVENT_BUS.register(this);
 	}
 
-	public boolean leftClickEvent(LivingEvent event) {
-		return (event instanceof LivingHurtEvent) || (event instanceof PlayerInteractEvent.LeftClickEmpty)
-				|| (event instanceof PlayerInteractEvent.LeftClickBlock);
-	}
-
-	public enum EVENT_TYPE {
+	public enum TARGET_TYPES {
 		LIVING_THING, BLOCK, AIR, IGNORE
 	}
 
-	public EVENT_TYPE getEventType(LivingEvent event) {
+	public TARGET_TYPES getTargetType(LivingEvent event) {
 		if (event instanceof LivingHurtEvent) {
 			if (((LivingHurtEvent) event).getSource().getImmediateSource() instanceof PlayerEntity) {
-				return EVENT_TYPE.LIVING_THING;
+				return TARGET_TYPES.LIVING_THING;
 			}
 		} else if (event instanceof PlayerInteractEvent.LeftClickBlock) {
-			return EVENT_TYPE.BLOCK;
+			return TARGET_TYPES.BLOCK;
 		} else if (event instanceof PlayerInteractEvent.LeftClickEmpty) {
-			return EVENT_TYPE.AIR;
+			return TARGET_TYPES.AIR;
 		}
-		return EVENT_TYPE.IGNORE;
+		return TARGET_TYPES.IGNORE;
 	}
 
 	static boolean LOCKED = false;
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)
-	public void onUse(LivingEvent event) {
+	public void hearSpell(LivingEvent event) {
 		try {
 			if (!LOCKED) {
 				LOCKED = true;
-
 				PlayerEntity WIZARD = null;
 				Entity TARGET = null;
 				ItemStack WAND = null;
 				String WAND_NAME = null;
 				BlockPos POS = null;
 
-				EVENT_TYPE TYPE = getEventType(event);
+				TARGET_TYPES TYPE = getTargetType(event);
 				switch (TYPE) {
 				case IGNORE:
 					LOCKED = false;
 					return;
 				case LIVING_THING:
-//					LOGGER.info(">>> IT'S A HIT!");
 					LivingHurtEvent LHE = (LivingHurtEvent) event;
 					WIZARD = (PlayerEntity) LHE.getSource().getImmediateSource();
 					TARGET = LHE.getEntity();
@@ -76,18 +69,16 @@ public class ExampleMod {
 					WAND_NAME = WAND.getDisplayName().getString();
 					POS = TARGET.getPosition();
 					break;
-				case BLOCK: // TRIGGERS TWICE FOR SOME REASON
-//					LOGGER.info(">>> IT'S A BLOCK!");
-					PlayerInteractEvent LCB = (PlayerInteractEvent.LeftClickBlock) event;
+				case BLOCK: // TRIGGERS TWICE FOR SOME REASON, AND POSITION IS WIZARD'S
+					PlayerInteractEvent.LeftClickBlock LCB = (PlayerInteractEvent.LeftClickBlock) event;
 					WIZARD = (PlayerEntity) LCB.getPlayer();
 					TARGET = LCB.getEntity();
 					WAND = WIZARD.getItemStackFromSlot(EquipmentSlotType.MAINHAND);
 					WAND_NAME = WAND.getDisplayName().getString();
 					POS = TARGET.getPosition();
 					break;
-				case AIR:
-//					LOGGER.info(">>> NOTHING BUT AIR!");
-					PlayerInteractEvent LCE = (PlayerInteractEvent.LeftClickEmpty) event;
+				case AIR: // POSITION IS WIZARD'S
+					PlayerInteractEvent.LeftClickEmpty LCE = (PlayerInteractEvent.LeftClickEmpty) event;
 					WIZARD = (PlayerEntity) LCE.getPlayer();
 					TARGET = LCE.getEntity();
 					WAND = WIZARD.getItemStackFromSlot(EquipmentSlotType.MAINHAND);
@@ -101,11 +92,9 @@ public class ExampleMod {
 				}
 
 				LOCKED = false;
-//				LOGGER.info(">>> PAST SWITCH!");
 
-				LOGGER.info(">>> THE WIZARD <<" + WIZARD.getName().getString() + ">> CAST A SPELL USING A WAND OF <<"
-						+ WAND.getItem().toString() + ">> NAMED <<" + WAND_NAME + ">> ON <<" + TYPE
-						+ ">> AT POSITION <<" + POS.toString() + ">>");
+				LOGGER.info(">>> HEARD SPELL...");
+				castSpell(WIZARD, TARGET, TYPE, WAND, WAND_NAME, POS);
 				LOGGER.info("");
 			}
 
@@ -114,6 +103,14 @@ public class ExampleMod {
 			LOGGER.error("WHOOPS" + ex.getMessage(), ex);
 		}
 
+	}
+
+	public void castSpell(PlayerEntity WIZARD, Entity TARGET, TARGET_TYPES TYPE, ItemStack WAND, String WAND_NAME,
+			BlockPos POS) {
+		LOGGER.info(">>> THE WIZARD <<" + WIZARD.getName().getString() + ">> CAST A SPELL USING A WAND OF <<"
+				+ WAND.getItem().toString() + ">> NAMED <<" + WAND_NAME + ">> ON <<" + TYPE + ">> AT POSITION <<"
+				+ POS.toString() + ">>");
+		// set switch here for all different spells
 	}
 
 }

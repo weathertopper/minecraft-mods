@@ -29,3 +29,4 @@ Move jar under `%appdata#/.minecraft/mods`
   - CLEAN SLATE PROTOCOL
   - ELDER WAND
   - MIDAS
+  
