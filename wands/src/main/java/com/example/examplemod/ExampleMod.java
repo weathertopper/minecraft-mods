@@ -1,84 +1,119 @@
 package com.example.examplemod;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.EquipmentSlotType;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.math.BlockPos;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.InterModComms;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
-import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
-import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.stream.Collectors;
-
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod("examplemod")
-public class ExampleMod
-{
-    // Directly reference a log4j logger.
-    private static final Logger LOGGER = LogManager.getLogger();
+public class ExampleMod {
+	// Directly reference a log4j logger.
+	private static final Logger LOGGER = LogManager.getLogger();
 
-    public ExampleMod() {
-        // Register the setup method for modloading
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
-        // Register the enqueueIMC method for modloading
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::enqueueIMC);
-        // Register the processIMC method for modloading
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::processIMC);
-        // Register the doClientStuff method for modloading
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::doClientStuff);
+	public ExampleMod() {
+		// Register ourselves for server and other game events we are interested in
+		MinecraftForge.EVENT_BUS.register(this);
+	}
 
-        // Register ourselves for server and other game events we are interested in
-        MinecraftForge.EVENT_BUS.register(this);
-    }
+	public boolean leftClickEvent(LivingEvent event) {
+		return (event instanceof LivingHurtEvent) || (event instanceof PlayerInteractEvent.LeftClickEmpty)
+				|| (event instanceof PlayerInteractEvent.LeftClickBlock);
+	}
 
-    private void setup(final FMLCommonSetupEvent event)
-    {
-        // some preinit code
-        LOGGER.info("HELLO FROM PREINIT");
-        LOGGER.info("DIRT BLOCK >> {}", Blocks.DIRT.getRegistryName());
-    }
+	public enum EVENT_TYPE {
+		LIVING_THING, BLOCK, AIR, IGNORE
+	}
 
-    private void doClientStuff(final FMLClientSetupEvent event) {
-        // do something that can only be done on the client
-        LOGGER.info("Got game settings {}", event.getMinecraftSupplier().get().gameSettings);
-    }
+	public EVENT_TYPE getEventType(LivingEvent event) {
+		if (event instanceof LivingHurtEvent) {
+			if (((LivingHurtEvent) event).getSource().getImmediateSource() instanceof PlayerEntity) {
+				return EVENT_TYPE.LIVING_THING;
+			}
+		} else if (event instanceof PlayerInteractEvent.LeftClickBlock) {
+			return EVENT_TYPE.BLOCK;
+		} else if (event instanceof PlayerInteractEvent.LeftClickEmpty) {
+			return EVENT_TYPE.AIR;
+		}
+		return EVENT_TYPE.IGNORE;
+	}
 
-    private void enqueueIMC(final InterModEnqueueEvent event)
-    {
-        // some example code to dispatch IMC to another mod
-        InterModComms.sendTo("examplemod", "helloworld", () -> { LOGGER.info("Hello world from the MDK"); return "Hello world";});
-    }
+	static boolean LOCKED = false;
 
-    private void processIMC(final InterModProcessEvent event)
-    {
-        // some example code to receive and process InterModComms from other mods
-        LOGGER.info("Got IMC {}", event.getIMCStream().
-                map(m->m.getMessageSupplier().get()).
-                collect(Collectors.toList()));
-    }
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
-    @SubscribeEvent
-    public void onServerStarting(FMLServerStartingEvent event) {
-        // do something when the server starts
-        LOGGER.info("HELLO from server starting");
-    }
+	@SubscribeEvent(priority = EventPriority.HIGHEST)
+	public void onUse(LivingEvent event) {
+		try {
+			if (!LOCKED) {
+				LOCKED = true;
 
-    // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
-    // Event bus for receiving Registry Events)
-    @Mod.EventBusSubscriber(bus=Mod.EventBusSubscriber.Bus.MOD)
-    public static class RegistryEvents {
-        @SubscribeEvent
-        public static void onBlocksRegistry(final RegistryEvent.Register<Block> blockRegistryEvent) {
-            // register a new block here
-            LOGGER.info("HELLO from Register Block");
-        }
-    }
+				PlayerEntity WIZARD = null;
+				Entity TARGET = null;
+				ItemStack WAND = null;
+				String WAND_NAME = null;
+				BlockPos POS = null;
+
+				EVENT_TYPE TYPE = getEventType(event);
+				switch (TYPE) {
+				case IGNORE:
+					LOCKED = false;
+					return;
+				case LIVING_THING:
+//					LOGGER.info(">>> IT'S A HIT!");
+					LivingHurtEvent LHE = (LivingHurtEvent) event;
+					WIZARD = (PlayerEntity) LHE.getSource().getImmediateSource();
+					TARGET = LHE.getEntity();
+					WAND = WIZARD.getItemStackFromSlot(EquipmentSlotType.MAINHAND);
+					WAND_NAME = WAND.getDisplayName().getString();
+					POS = TARGET.getPosition();
+					break;
+				case BLOCK: // TRIGGERS TWICE FOR SOME REASON
+//					LOGGER.info(">>> IT'S A BLOCK!");
+					PlayerInteractEvent LCB = (PlayerInteractEvent.LeftClickBlock) event;
+					WIZARD = (PlayerEntity) LCB.getPlayer();
+					TARGET = LCB.getEntity();
+					WAND = WIZARD.getItemStackFromSlot(EquipmentSlotType.MAINHAND);
+					WAND_NAME = WAND.getDisplayName().getString();
+					POS = TARGET.getPosition();
+					break;
+				case AIR:
+//					LOGGER.info(">>> NOTHING BUT AIR!");
+					PlayerInteractEvent LCE = (PlayerInteractEvent.LeftClickEmpty) event;
+					WIZARD = (PlayerEntity) LCE.getPlayer();
+					TARGET = LCE.getEntity();
+					WAND = WIZARD.getItemStackFromSlot(EquipmentSlotType.MAINHAND);
+					WAND_NAME = WAND.getDisplayName().getString();
+					POS = TARGET.getPosition();
+					break;
+				}
+
+				if (event.isCancelable()) {
+					event.setCanceled(true);
+				}
+
+				LOCKED = false;
+//				LOGGER.info(">>> PAST SWITCH!");
+
+				LOGGER.info(">>> THE WIZARD <<" + WIZARD.getName().getString() + ">> CAST A SPELL USING A WAND OF <<"
+						+ WAND.getItem().toString() + ">> NAMED <<" + WAND_NAME + ">> ON <<" + TYPE
+						+ ">> AT POSITION <<" + POS.toString() + ">>");
+				LOGGER.info("");
+			}
+
+		} catch (Exception ex) {
+			LOCKED = false;
+			LOGGER.error("WHOOPS" + ex.getMessage(), ex);
+		}
+
+	}
+
 }
