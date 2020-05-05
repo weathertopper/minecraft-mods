@@ -1,4 +1,4 @@
-package com.example.examplemod;
+package spellbinder;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
@@ -27,6 +27,8 @@ import org.apache.logging.log4j.Logger;
 public class DRIVER {
 	// Directly reference a log4j logger.
 	private static final Logger LOGGER = LogManager.getLogger();
+	
+	public EnchantedBlocks enchantedBlocks = new EnchantedBlocks();
 
 	public DRIVER() {
 		// Register ourselves for server and other game events we are interested in
@@ -52,57 +54,6 @@ public class DRIVER {
 			return TARGET_TYPES.AIR;
 		}
 		return TARGET_TYPES.IGNORE;
-	}
-
-	static ArrayList<Pair<String, Long>> LOCKED_BLOCKS = new ArrayList<Pair<String,Long>>();
-	
-	static Long LOCK_BLOCKS_EPSILON = new Long(5);
-
-	public Pair<String, Long> createLockBlockPair(BlockPos pos, Long time) {
-		return new Pair<String, Long> (getPositionString(pos), time); 
-	}
-	
-	public String getPositionString(BlockPos pos) {
-		return String.format("(%o,%o,%o)", pos.getX(), pos.getY(), pos.getZ());
-	}
-
-	public boolean isBlockLocked(BlockPos pos) {
-		for (int i=LOCKED_BLOCKS.size()-1; i >= 0 ; i--){
-//			LOGGER.info(">>> LOCKED_BLOCKS INCLUDES " + LOCKED_BLOCKS.get(i).toString() );
-			if (getPositionString(pos).equals(LOCKED_BLOCKS.get(i).getFirst())) {
-//				LOGGER.info(">>> BLOCK AT " + getPositionString(pos)  + " IS LOCKED");
-				return true;
-			}
-		}
-//		LOGGER.info(">>> BLOCK AT " + getPositionString(pos)  + " IS NOT LOCKED");
-		return false;
-	}
-
-	public void lockBlock(BlockPos pos, Long time) {
-		LOCKED_BLOCKS.add(createLockBlockPair(pos, time));
-	}
-
-	public void unlockBlock(BlockPos pos, Long time) {
-//		LOGGER.info(">>> UNLOCKING BLOCK " + getPositionString(pos) + " AT TIME " + time);
-		for (int i=LOCKED_BLOCKS.size()-1; i >= 0 ; i--){
-			if (LOCKED_BLOCKS.get(i).getFirst().equals(getPositionString(pos))) {
-//				LOGGER.info(">>> UNLOCKING BLOCK " + getPositionString(pos) + " AT TIME " + time + " SUCCEEDED");
-				LOCKED_BLOCKS.remove(i);
-			}
-		}
-	}
-	
-	public void pruneLockedBlocks(Long currentTime) {
-		for (int i=LOCKED_BLOCKS.size()-1; i >= 0 ; i--){
-			if (currentTime > LOCKED_BLOCKS.get(i).getSecond() + LOCK_BLOCKS_EPSILON) {
-//				LOGGER.info(">>> PRUNED LOCKED BLOCK PAIR" + LOCKED_BLOCKS.get(i).toString() + " AT " + currentTime);
-				LOCKED_BLOCKS.remove(i);
-			}
-		}
-	}
-
-	public void emptyLockedBlocks() {
-		LOCKED_BLOCKS = new ArrayList<Pair<String, Long>>();
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -149,19 +100,19 @@ public class DRIVER {
 			}
 			
 			Long TIME = TARGET.getEntityWorld().getGameTime();
-			pruneLockedBlocks(TIME);
-			if (isBlockLocked(POS)) {
+			enchantedBlocks.pruneEnchantedBlocks(TIME);
+			if (enchantedBlocks.isBlockEnchanted(POS)) {
 //				LOGGER.info(">>> STRING POSITION ", getPositionString(POS), " IS LOCKED! SKIP!");
 				return;
 			}
 
-			lockBlock(POS, TIME);
+			enchantedBlocks.enchantBlock(POS, TIME);
 
 			castSpell(WIZARD, TARGET, TYPE, WAND, WAND_NAME, POS);
 			LOGGER.info("");
 
 		} catch (Exception ex) {
-			emptyLockedBlocks();
+			enchantedBlocks.disenchantAllBlocks();
 			LOGGER.error("WHOOPS hearSpell " + ex.getMessage(), ex);
 		}
 
@@ -172,9 +123,9 @@ public class DRIVER {
 		try {
 			LOGGER.info(">>> THE WIZARD <<" + WIZARD.getName().getString() + ">> CAST A SPELL USING A WAND OF <<"
 					+ WAND.getItem().toString() + ">> NAMED <<" + WAND_NAME + ">> ON <<" + TYPE + ">> AT POSITION <<"
-					+ getPositionString(POS) + ">>");
+					+ EnchantedBlocks.stringifyPosition(POS) + ">>");
 		} catch (Exception ex) {
-			emptyLockedBlocks();
+			enchantedBlocks.disenchantAllBlocks();
 			LOGGER.error("WHOOPS castSpell " + ex.getMessage(), ex);
 		}
 	}
