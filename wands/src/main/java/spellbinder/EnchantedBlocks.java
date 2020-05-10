@@ -6,6 +6,9 @@ import org.apache.commons.math3.util.Pair;
 
 import net.minecraft.util.math.BlockPos;
 
+
+// strictly to limit events captured at one time
+
 public class EnchantedBlocks {
 	
 	static Long ENCHANT_BLOCK_EPSILON = new Long(5);
@@ -29,7 +32,7 @@ public class EnchantedBlocks {
 	}
 	
 
-	public static Pair<String, Long> createLockBlockPair(BlockPos pos, Long time) {
+	public static Pair<String, Long> createEnchantedBlock(BlockPos pos, Long time) {
 		return new Pair<String, Long> (stringifyPosition(pos), time); 
 	}
 	
@@ -38,7 +41,7 @@ public class EnchantedBlocks {
 	}
 
 	public void enchantBlock(BlockPos pos, Long time) {
-		this.enchantedBlocks.add(createLockBlockPair(pos, time));
+		this.enchantedBlocks.add(createEnchantedBlock(pos, time));
 	}
 
 	public void disenchantBlock(BlockPos pos, Long time) {
